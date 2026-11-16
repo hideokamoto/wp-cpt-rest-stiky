@@ -47,7 +47,8 @@ class CPT_Sticky_Posts {
 
         // 各投稿タイプに対してカラムフックを登録
         foreach ( $this->target_post_types as $post_type ) {
-            add_filter( "manage_{$post_type}_posts_columns", [ $this, 'add_sticky_column' ], 10, 2 );
+            // manage_{$post_type}_posts_columns passes a single argument (the columns array).
+            add_filter( "manage_{$post_type}_posts_columns", [ $this, 'add_sticky_column' ] );
             add_action( "manage_{$post_type}_posts_custom_column", [ $this, 'render_sticky_column' ], 10, 2 );
         }
     }
@@ -293,10 +294,9 @@ class CPT_Sticky_Posts {
     /**
      * 投稿一覧にStickyカラムを追加
      */
-    public function add_sticky_column( array $columns, string $post_type ): array {
-        if ( in_array( $post_type, $this->target_post_types, true ) ) {
-            $columns['cpt_sticky'] = __( '固定', 'cpt-sticky-posts' );
-        }
+    public function add_sticky_column( array $columns ): array {
+        // Only hooked for target post types, so no post type check is needed here.
+        $columns['cpt_sticky'] = __( '固定', 'cpt-sticky-posts' );
         return $columns;
     }
     
