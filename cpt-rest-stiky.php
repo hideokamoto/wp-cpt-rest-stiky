@@ -21,7 +21,9 @@ class CPT_Sticky_Posts {
     
     public function __construct() {
         add_action( 'init', [ $this, 'set_target_post_types' ], 20 );
-        add_action( 'rest_api_init', [ $this, 'register_sticky_meta' ] );
+        // Register on every request (not only REST) so the sanitize / auth callbacks
+        // also apply to the classic editor, WP-CLI and other update_post_meta() calls.
+        add_action( 'init', [ $this, 'register_sticky_meta' ], 21 );
         add_action( 'rest_api_init', [ $this, 'register_rest_query_params' ] );
         add_action( 'add_meta_boxes', [ $this, 'add_sticky_meta_box' ] );
         add_action( 'save_post', [ $this, 'save_sticky_meta' ] );
