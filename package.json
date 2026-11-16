@@ -1,0 +1,14 @@
+{
+  "name": "wp-cpt-rest-stiky",
+  "private": true,
+  "description": "wp-env で WordPress のテスト環境を立ち上げ、PHPUnit を回すための開発用設定（プラグインの zip には入らない）",
+  "scripts": {
+    "wp-env": "wp-env",
+    "test:setup": "wp-env start && wp-env run tests-cli --env-cwd=wp-content/plugins/wp-cpt-rest-stiky composer install --no-interaction",
+    "test": "wp-env run tests-cli --env-cwd=wp-content/plugins/wp-cpt-rest-stiky vendor/bin/phpunit"
+  },
+  "license": "GPL-2.0-or-later",
+  "devDependencies": {
+    "@wordpress/env": "^12.1.0"
+  }
+}

@@ -1,5 +1,9 @@
 # Testing Guide for sticky_first Fix
 
+> Automated: the scenarios below are covered by PHPUnit (`tests/RestQueryTest.php`), run on
+> wp-env with `npm run test` and on CircleCI for every push. The manual steps remain useful
+> for checking a real site.
+
 ## Issue Fixed
 The `sticky_first=true` parameter was excluding posts without the `_cpt_is_sticky` meta field, causing legacy posts to disappear from results.
 
