@@ -46,3 +46,11 @@ wp-config.php
 # Note: If you wish to whitelist themes,
 # uncomment the next line
 #/wp-content/themes
+
+# Development / test tooling (not part of the plugin)
+/node_modules/
+/vendor/
+/composer.lock
+/test-results/
+/.wp-env.override.json
+.phpunit.result.cache
