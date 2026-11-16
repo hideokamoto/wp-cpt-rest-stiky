@@ -1,11 +1,16 @@
 <?php
 /**
- * Plugin Name: CPT Sticky Posts
- * Description: カスタム投稿タイプに「先頭に固定」機能を追加し、REST APIでの取得に対応
- * Version: 1.0.0
- * Author: Your Name
- * Text Domain: cpt-sticky-posts
- * Requires PHP: 7.4
+ * Plugin Name:       CPT Sticky Posts
+ * Plugin URI:        https://github.com/hideokamoto/wp-cpt-rest-stiky
+ * Description:       カスタム投稿タイプに「先頭に固定」機能を追加し、REST APIでの取得に対応
+ * Version:           1.0.0
+ * Requires at least: 6.5
+ * Requires PHP:      7.4
+ * Author:            Hidetaka Okamoto
+ * Author URI:        https://wp-kyoto.net
+ * License:           GPLv2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       cpt-sticky-posts
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

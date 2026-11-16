@@ -109,12 +109,24 @@ await fetch('/wp-json/wp/v2/news/123', {
 ## 注意事項
 
 - CPT UIで作成したカスタム投稿タイプは、「REST APIで表示」が有効になっている必要があります
-- `sticky_first` は `meta_query` を使用するため、大量の投稿がある場合はパフォーマンスに影響する可能性があります
+- `sticky_first` は並べ替えのたびに `_cpt_is_sticky` メタを参照するため、大量の投稿がある場合はパフォーマンスに影響する可能性があります
 
 ## 要件
 
-- WordPress 5.0以上
+- WordPress 6.5以上（7.1 まで動作確認済み）
 - PHP 7.4以上
+
+## 開発
+
+テストは [wp-env](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) 上の PHPUnit で動きます（Docker と Node.js が必要）。
+
+```bash
+npm install
+npm run test:setup   # wp-env を起動して composer install
+npm run test         # PHPUnit
+```
+
+CircleCI（`.circleci/config.yml`）が push のたびに PHP 7.4 / WordPress 6.5 と PHP 8.4 / WordPress 最新の 2 通りで同じテストを回します。
 
 ## ライセンス
 

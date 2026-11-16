@@ -11,23 +11,33 @@
 
 **Tech Stack:**
 - Pure PHP (7.4+)
-- WordPress 5.0+
-- No external dependencies or build process
+- WordPress 6.5+ (tested up to 7.1)
+- No runtime dependencies or build process
 - Single-file architecture
+- Dev-only tooling: PHPUnit on wp-env (`package.json`, `composer.json`, `tests/`), run on CircleCI
 
 ## Repository Structure
 
 ```
 cpt-rest-stiky/
 ├── .git/                    # Git repository data
+├── .circleci/config.yml    # CircleCI: PHPUnit on wp-env (PHP 7.4/WP 6.5 and PHP 8.4/WP latest)
+├── .gitattributes          # export-ignore for dev files
 ├── .gitignore              # WordPress-specific gitignore
-├── LICENSE                 # GPL v2 or later license
+├── .wp-env.json            # wp-env config for the tests
+├── composer.json           # Dev only: PHPUnit + polyfills
+├── package.json            # Dev only: @wordpress/env
+├── phpunit.xml.dist        # PHPUnit config
+├── tests/                  # PHPUnit tests (WordPress test library)
+├── LICENSE                 # License text
 ├── README.md               # User-facing documentation (Japanese)
+├── readme.txt              # WordPress plugin readme (compatibility fields)
 ├── CLAUDE.md               # This file - AI assistant guide
+├── TESTING.md              # Manual test guide for sticky / sticky_first
 └── cpt-rest-stiky.php      # Main plugin file (entire codebase)
 ```
 
-**Important:** This is a single-file plugin with no build process, no package.json, no JavaScript files, and no external dependencies.
+**Important:** The plugin itself is a single PHP file with no build process, no JavaScript files, and no runtime dependencies. `package.json` / `composer.json` exist only to run the tests and are excluded from release archives via `.gitattributes`.
 
 ## Codebase Architecture
 
@@ -113,13 +123,15 @@ meta_query: OR (
 )
 ```
 
+Because a `sticky` collection param is registered, core's posts controller rewrites
+`post__in` / `post__not_in` from the `sticky_posts` option. `filter_rest_query()` resets
+them to the request's `include` / `exclude` before adding the meta query.
+
 **For `sticky_first=true`:**
-```php
-orderby: [
-    'sticky_clause' => 'DESC',  // Sticky posts first
-    {existing_orderby} => {existing_order}
-]
-```
+The query gets a `cpt_sticky_first` flag and `order_sticky_first()` (`posts_orderby`)
+prepends `EXISTS(... _cpt_is_sticky = '1') DESC` to the ORDER BY. No JOIN or WHERE is
+added, so posts without the meta stay in the results, and the requested orderby/order
+remain the secondary sort. (A named meta_query OR group cannot be used in `orderby`.)
 
 ### 4. Admin UI Components
 
@@ -132,7 +144,7 @@ orderby: [
 #### Admin Column (Line 257-272)
 - Shows dashicons-sticky icon for sticky posts
 - Shows "—" for non-sticky posts
-- Hook: `manage_posts_columns` and `manage_posts_custom_column`
+- Hook: `manage_{$post_type}_posts_columns` (one argument) and `manage_{$post_type}_posts_custom_column`
 
 ## Development Workflow
 
@@ -150,7 +162,8 @@ orderby: [
    - Direct PHP execution
 
 3. **Testing Environment**
-   - Requires WordPress 5.0+
+   - Automated: `npm install && npm run test:setup && npm run test` (PHPUnit on wp-env, needs Docker)
+   - Requires WordPress 6.5+
    - Requires PHP 7.4+
    - Requires at least one custom post type with `show_in_rest = true`
 
@@ -198,14 +211,16 @@ curl -X POST http://yoursite.local/wp-json/wp/v2/{post_type}/123 \
 
 | Hook | Type | Purpose | Line |
 |------|------|---------|------|
-| `init` | action | Set target post types | 23 |
-| `rest_api_init` | action | Register REST meta and params | 24-25 |
-| `add_meta_boxes` | action | Add sticky meta box | 26 |
-| `save_post` | action | Save sticky meta value | 27 |
-| `manage_posts_columns` | filter | Add sticky column | 28 |
-| `manage_posts_custom_column` | action | Render sticky column | 29 |
-| `rest_{post_type}_query` | filter | Modify REST queries | 100 |
-| `rest_{post_type}_collection_params` | filter | Add query param schemas | 103 |
+| `init` (20) | action | Set target post types | 28 |
+| `init` (21) | action | Register meta and REST field | 31 |
+| `rest_api_init` | action | Register REST query params | 32 |
+| `add_meta_boxes` | action | Add sticky meta box | 33 |
+| `save_post` | action | Save sticky meta value | 34 |
+| `posts_orderby` | filter | `sticky_first` ordering | 35 |
+| `manage_{$post_type}_posts_columns` | filter | Add sticky column | 59 |
+| `manage_{$post_type}_posts_custom_column` | action | Render sticky column | 60 |
+| `rest_{post_type}_query` | filter | Modify REST queries | 119 |
+| `rest_{post_type}_collection_params` | filter | Add query param schemas | 122 |
 
 ### Hooks Provided by This Plugin
 
@@ -340,8 +355,8 @@ ADD INDEX idx_cpt_sticky (meta_key, meta_value);
    - Maintain this bilingual pattern
 
 4. **Testing:**
-   - Changes cannot be fully tested without WordPress installation
-   - Provide manual testing instructions
+   - Add or update PHPUnit tests in `tests/` for behaviour changes (run on wp-env / CircleCI)
+   - Provide manual testing instructions where tests cannot cover it
    - Suggest REST API curl commands for verification
 
 5. **Security First:**
@@ -351,8 +366,8 @@ ADD INDEX idx_cpt_sticky (meta_key, meta_value);
    - ALWAYS validate and sanitize input
 
 6. **No Build Process:**
-   - Don't suggest npm, webpack, or build tools
-   - Don't create package.json
+   - Don't suggest webpack or build tools for the plugin
+   - `package.json` / `composer.json` are for the test environment only; don't add runtime dependencies
    - This is pure PHP - no transpilation needed
 
 7. **WordPress Best Practices:**
@@ -441,12 +456,12 @@ print_r($types);
 - **Update sticky:** `POST /wp-json/wp/v2/{post_type}/{id}` with `{"sticky": true}`
 
 ### WordPress Requirements
-- Version: 5.0+
+- Version: 6.5+ (tested up to 7.1)
 - PHP: 7.4+
 - Requires: Custom post types with `show_in_rest = true`
 
 ---
 
-**Last Updated:** 2026-02-04
+**Last Updated:** 2026-11-16
 **Plugin Version:** 1.0.0
 **For Questions:** Refer to README.md or WordPress Codex
