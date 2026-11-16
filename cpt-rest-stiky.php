@@ -126,6 +126,13 @@ class CPT_Sticky_Posts {
 
         // sticky=true/false でフィルタリング
         if ( null !== $sticky_param ) {
+            // Because a `sticky` collection param is registered, core's posts controller
+            // rewrites post__in / post__not_in from the `sticky_posts` option (core's list
+            // for regular posts). This plugin keeps the flag in post meta, so reset them
+            // to what the client asked for with include / exclude.
+            $args['post__in']     = (array) ( $request->get_param( 'include' ) ?? [] );
+            $args['post__not_in'] = (array) ( $request->get_param( 'exclude' ) ?? [] );
+
             $sticky_value = filter_var( $sticky_param, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
 
             if ( null !== $sticky_value ) {
