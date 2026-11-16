@@ -25,6 +25,7 @@ class CPT_Sticky_Posts {
         add_action( 'rest_api_init', [ $this, 'register_rest_query_params' ] );
         add_action( 'add_meta_boxes', [ $this, 'add_sticky_meta_box' ] );
         add_action( 'save_post', [ $this, 'save_sticky_meta' ] );
+        add_filter( 'posts_orderby', [ $this, 'order_sticky_first' ], 10, 2 );
     }
     
     /**
@@ -166,42 +167,11 @@ class CPT_Sticky_Posts {
 
         // sticky_first=true でsticky投稿を先頭に
         if ( null !== $sticky_first && filter_var( $sticky_first, FILTER_VALIDATE_BOOLEAN ) ) {
-            // すべての投稿を含めるため、OR ロジックでメタ未設定も許可
-            $meta_query['sticky_clause'] = [
-                'relation' => 'OR',
-                [
-                    'key'     => '_cpt_is_sticky',
-                    'value'   => '1',
-                    'compare' => '=',
-                ],
-                [
-                    'key'     => '_cpt_is_sticky',
-                    'compare' => 'NOT EXISTS',
-                ],
-                [
-                    'key'     => '_cpt_is_sticky',
-                    'value'   => '',
-                    'compare' => '=',
-                ],
-                [
-                    'key'     => '_cpt_is_sticky',
-                    'value'   => '0',
-                    'compare' => '=',
-                ],
-            ];
-
-            $new_orderby = [ 'sticky_clause' => 'DESC' ];
-
-            $existing_orderby = $args['orderby'] ?? 'date';
-            $existing_order   = $args['order'] ?? 'DESC';
-
-            if ( is_array( $existing_orderby ) ) {
-                $args['orderby'] = array_merge( $new_orderby, $existing_orderby );
-            } else {
-                $new_orderby[ $existing_orderby ] = $existing_order;
-                $args['orderby'] = $new_orderby;
-            }
-            unset( $args['order'] );
+            // A named meta_query clause cannot do this: WP_Query only orders by leaf
+            // clauses, and filtering on the meta would drop posts without it. Flag the
+            // query instead and prepend the sticky sort in order_sticky_first().
+            // The requested orderby / order are left untouched.
+            $args['cpt_sticky_first'] = true;
         }
 
         if ( ! empty( $meta_query ) ) {
@@ -212,6 +182,27 @@ class CPT_Sticky_Posts {
         }
 
         return $args;
+    }
+    
+    /**
+     * sticky_first=true のクエリでsticky投稿を先頭に並べる
+     *
+     * Posts without the meta are kept (no JOIN, no WHERE), and the original
+     * ORDER BY stays as the secondary sort.
+     */
+    public function order_sticky_first( string $orderby, WP_Query $query ): string {
+        if ( ! $query->get( 'cpt_sticky_first' ) ) {
+            return $orderby;
+        }
+
+        global $wpdb;
+        $sticky_order = $wpdb->prepare(
+            "EXISTS ( SELECT 1 FROM {$wpdb->postmeta} AS cpt_sticky_pm WHERE cpt_sticky_pm.post_id = {$wpdb->posts}.ID AND cpt_sticky_pm.meta_key = %s AND cpt_sticky_pm.meta_value = %s ) DESC",
+            '_cpt_is_sticky',
+            '1'
+        );
+
+        return '' === $orderby ? $sticky_order : $sticky_order . ', ' . $orderby;
     }
     
     /**
